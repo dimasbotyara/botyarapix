@@ -1,0 +1,25 @@
+# build
+build/
+cmake-build-*/
+out/
+art/
+*.o
+*.obj
+*.exe
+*.a
+*.lib
+*.pdb
+
+# ide
+.vscode/
+.idea/
+.cache/
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# локальные артефакты
+botyarapix-output/
+*.tmp
