@@ -44,6 +44,9 @@ const std::unordered_map<std::string, Entry>& dictionary() {
         {"menu.language", {"Language: {0}", "Язык: {0}"}},
         {"menu.output", {"Save folder: {0}", "Папка сохранения: {0}"}},
         {"menu.exit", {"Exit", "Выход"}},
+        {"menu.new.hint", {"size -> algorithm -> preview", "размер -> алгоритм -> предпросмотр"}},
+        {"menu.language.hint", {"switch RU / EN", "переключить RU / EN"}},
+        {"menu.output.hint", {"where PNG files go", "куда сохранять PNG"}},
         {"menu.state", {"Canvas {0}x{1} - algorithm {2} - upscale x{3}",
                         "Холст {0}x{1} - алгоритм {2} - апскейл x{3}"}},
 
@@ -70,6 +73,8 @@ const std::unordered_map<std::string, Entry>& dictionary() {
         {"after.regen", {"Regenerate (new seed)", "Регенерировать (новый сид)"}},
         {"after.save", {"Upscale & save as PNG", "Апскейл и сохранить в PNG"}},
         {"after.back", {"Back to main menu", "Назад в главное меню"}},
+        {"after.regen.hint", {"same settings, new random seed", "те же настройки, новый сид"}},
+        {"after.save.hint", {"pick factor and write PNG", "выбрать апскейл и записать PNG"}},
         {"after.push", {"Press Enter to go back to the preview.", "Нажмите Enter - вернёмся к предпросмотру."}},
 
         // --- сохранение ---

@@ -23,3 +23,7 @@ Thumbs.db
 # локальные артефакты
 botyarapix-output/
 *.tmp
+
+# python (тесты TUI)
+__pycache__/
+*.pyc
