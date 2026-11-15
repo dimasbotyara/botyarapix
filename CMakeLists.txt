@@ -90,4 +90,17 @@ enable_testing()
 add_test(NAME selftest COMMAND botyarapix --selftest)
 add_test(NAME list COMMAND botyarapix --list)
 
+# TUI-сценарии: меню в настоящем pty (raw-mode, стрелки, ресайз, Termux).
+# Нужен Python 3 и POSIX (pty); на Windows тест просто не регистрируется.
+if(UNIX)
+    find_program(PYTHON3_EXECUTABLE NAMES python3 python)
+    if(PYTHON3_EXECUTABLE)
+        add_test(NAME tui
+            COMMAND ${PYTHON3_EXECUTABLE}
+                    "${CMAKE_CURRENT_SOURCE_DIR}/tests/tui_scenarios.py"
+                    --binary $<TARGET_FILE:botyarapix>)
+        set_tests_properties(tui PROPERTIES TIMEOUT 300)
+    endif()
+endif()
+
 message(STATUS "botyarapix ${PROJECT_VERSION}: build type = ${CMAKE_BUILD_TYPE}")
