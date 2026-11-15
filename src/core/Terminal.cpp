@@ -744,6 +744,33 @@ int Terminal::menu(const std::string& title, const std::string& hint,
     const int totalSelectable = static_cast<int>(selectable.size());
     int cursor = nearestSelectable(selectable, initialIndex, count);
 
+    // Позиция курсора в списке ВЫБИРАЕМЫХ пунктов (0..totalSelectable-1).
+    // Нужна отдельно: разделители и заголовки не должны сбивать шаг — иначе,
+    // стоя на «Выходе» за разделителем, ↑ и ↓ прыгают не туда.
+    auto slotOf = [&](int index) {
+        const auto it = std::find(selectable.begin(), selectable.end(), index);
+        return it == selectable.end() ? -1 : static_cast<int>(it - selectable.begin());
+    };
+    auto moveBy = [&](int delta) {
+        const int slot = slotOf(cursor);
+        const int base = slot < 0 ? 0 : slot;
+        const int next = ((base + delta) % totalSelectable + totalSelectable) % totalSelectable;
+        cursor = selectable[static_cast<std::size_t>(next)];
+    };
+    auto moveTo = [&](int slot) {
+        cursor = selectable[static_cast<std::size_t>((slot % totalSelectable + totalSelectable) %
+                                                    totalSelectable)];
+    };
+    // Страница/Home/End — это «прыжок к краю», а не бесконечная карусель:
+    // на коротком списке PgDn должен упираться в последний пункт, а не
+    // возвращаться туда, где стоял (5 шагов по кругу из 4 пунктов = тот же пункт).
+    auto jumpBy = [&](int delta) {
+        const int slot = slotOf(cursor);
+        const int base = slot < 0 ? 0 : slot;
+        const int target = std::max(0, std::min(base + delta, totalSelectable - 1));
+        cursor = selectable[static_cast<std::size_t>(target)];
+    };
+
     // Ширина для обрезки: строка не должна переноситься, иначе \033[nA врёт.
     // Пересчитываем на каждом кадре — в Termux окно меняется при повороте экрана.
     std::size_t maxWidth = 0;
@@ -862,22 +889,22 @@ int Terminal::menu(const std::string& title, const std::string& hint,
         const KeyPress key = readKey();
         switch (key.type) {
             case KeyPress::Type::Up:
-                cursor = (cursor > 0) ? cursor - 1 : count - 1;
+                moveBy(-1);
                 break;
             case KeyPress::Type::Down:
-                cursor = (cursor + 1) % count;
+                moveBy(+1);
                 break;
             case KeyPress::Type::Home:
-                cursor = 0;
+                moveTo(0);
                 break;
             case KeyPress::Type::End:
-                cursor = count - 1;
+                moveTo(totalSelectable - 1);
                 break;
             case KeyPress::Type::PageUp:
-                cursor = std::max(0, cursor - 5);
+                jumpBy(-5);
                 break;
             case KeyPress::Type::PageDown:
-                cursor = std::min(count - 1, cursor + 5);
+                jumpBy(+5);
                 break;
             case KeyPress::Type::Digit:
                 if (key.digit >= 1 && key.digit <= totalSelectable) {
@@ -900,10 +927,9 @@ int Terminal::menu(const std::string& title, const std::string& hint,
                 break;
         }
 
-        // Курсор всегда стоит на выбираемом пункте, иначе Enter «не работает».
-        if (!finished &&
-            (items[static_cast<std::size_t>(cursor)].kind != MenuItem::Kind::Item ||
-             !items[static_cast<std::size_t>(cursor)].enabled)) {
+        // Страховка: после любых клавиш курсор обязан стоять на выбираемом пункте,
+        // иначе Enter «не работает», а шаг ↑/↓ считается от разделителя.
+        if (!finished && slotOf(cursor) < 0) {
             cursor = nearestSelectable(selectable, cursor, count);
         }
     }

@@ -206,6 +206,84 @@ def scenario_navigation():
     check("обычный выход с кодом 0", status == 0, str(status))
 
 
+def scenario_step_over_separator():
+    """Регрессия: разделитель перед «Выход» ломал шаг ↑/↓.
+
+    Баг: курсор вставал на строку-разделитель, и следующий шаг считался уже
+    от неё — ↑ на «Выходе» не работал, а ↓ прыгал через пункт.
+    """
+    print("\n2b) Шаг курсора через разделитель (регрессия)")
+    write_config("ru")
+    session = Session(cols=74, rows=26)
+    step_down = b"\x1b[B"
+    step_up = b"\x1b[A"
+    check("старт на пункте 1", session.selected().startswith(">  1."), session.selected())
+    for index in range(3):
+        session.send(step_down, pause=0.28)
+    check("3×↓ приводит на «Выход» (после разделителя)",
+          session.selected().startswith(">  4. Выход"), session.selected())
+    session.send(step_up, pause=0.32)
+    check("↑ с «Выхода» возвращает на пункт 3 (не залипает)",
+          session.selected().startswith(">  3."), session.selected())
+    session.send(step_up, pause=0.32)
+    check("↑ с пункта 3 ведёт на 2", session.selected().startswith(">  2."), session.selected())
+    session.send(step_up, pause=0.32)
+    check("↑ с пункта 2 ведёт на 1", session.selected().startswith(">  1."), session.selected())
+    session.send(step_up, pause=0.32)
+    check("↑ с пункта 1 заворачивается на «Выход»",
+          session.selected().startswith(">  4. Выход"), session.selected())
+    session.send(step_down, pause=0.32)
+    check("↓ с «Выхода» ведёт на 1 (через разделитель)",
+          session.selected().startswith(">  1."), session.selected())
+    session.send(b"\x1b[F", pause=0.32)
+    check("End = последний выбираемый пункт",
+          session.selected().startswith(">  4. Выход"), session.selected())
+    session.send(b"\x1b[6~", pause=0.32)
+    check("PgDn на коротком списке упирается в конец, а не заворачивается",
+          session.selected().startswith(">  4. Выход"), session.selected())
+    session.send(b"\x1b[5~", pause=0.32)
+    check("PgUp с «Выхода» возвращает в начало",
+          session.selected().startswith(">  1."), session.selected())
+    session.close()
+
+    # Меню «Что дальше?» тоже содержит разделитель — проверим и его.
+    write_config("en", generator="random")
+    session = Session(cols=80, rows=34)
+    session.send(b"1", pause=0.4)
+    session.send(b"2", pause=0.4)
+    session.send(b"1", pause=0.7)
+    check("открылся предпросмотр с меню «Что дальше?»", "What's next?" in session.text())
+    session.send(step_down, pause=0.28)
+    session.send(step_down, pause=0.28)
+    check("2×↓ приводит на «Back» (после разделителя)",
+          session.selected().startswith(">  3. Back"), session.selected())
+    session.send(step_up, pause=0.32)
+    check("↑ с «Back» ведёт на «Upscale & save»",
+          session.selected().startswith(">  2. Upscale"), session.selected())
+    session.send(step_up, pause=0.32)
+    check("↑ ведёт на «Regenerate»",
+          session.selected().startswith(">  1. Regenerate"), session.selected())
+    session.close()
+
+
+def scenario_disabled_and_groups():
+    """Пункты, которые нельзя выбрать, не должны ловить курсор.
+
+    В интерактивных экранах таких пунктов пока нет, но API их поддерживает —
+    проверяем через `--list`-подобный проход нельзя, поэтому держим регрессию
+    на нумерации: цифра N выбирает N-й ВЫБИРАЕМЫЙ пункт, а не N-ю строку.
+    """
+    print("\n3b) Разделители не участвуют в нумерации цифрами")
+    write_config("ru")
+    session = Session(cols=74, rows=26)
+    check("«Выход» — это цифра 4, хотя строк 5",
+          session.text().count("\n") > 0 and "4. Выход" in session.text())
+    session.send(b"4", pause=0.6)
+    check("цифра 4 = выход из программы", "Готово" in session.text() or "Done" in session.text(),
+          session.text()[-160:])
+    session.close()
+
+
 def scenario_groups():
     print("\n3) Разделители и заголовки групп")
     write_config("en")
@@ -378,6 +456,8 @@ def main() -> int:
     try:
         scenario_arrow_echo()
         scenario_navigation()
+        scenario_step_over_separator()
+        scenario_disabled_and_groups()
         scenario_groups()
         scenario_generator_flow()
         scenario_custom_size()
